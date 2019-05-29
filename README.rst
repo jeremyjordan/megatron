@@ -56,6 +56,13 @@ See the project `documentation`_ For an in-depth tutorial where you can build th
 
 .. image:: https://raw.githubusercontent.com/ntaylorwss/megatron/master/img/keras.png
 
+Also check out the example notebooks, which you can conveniently launch from Binder by clicking on the badge below.
+
+.. image:: https://mybinder.org/badge_logo.svg
+ :target: https://mybinder.org/v2/gh/ntaylorwss/megatron/master
+
+
+
 Custom Layers
 -------------
 If you have a function that takes in Numpy arrays and produces Numpy arrays, you have two possible paths to adding it as a Layer in a Pipeline:
