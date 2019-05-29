@@ -13,11 +13,8 @@ Or any combination of these.
 Megatron is distributed under the MIT license.
 '''
 
-with open('VERSION') as f:
-    version = f.read().strip()
-
 setup(name='Megatron',
-      version=version,
+      version='0.5.1',
       description='A computation graph library for feature engineering with Numpy data',
       long_description=long_description,
       author='Nash Taylor',
@@ -27,6 +24,8 @@ setup(name='Megatron',
       license='MIT',
       packages=find_packages(),
       install_requires=[
+        'numpy',
+        'pandas',
         'dill',
       ],
       classifiers=[

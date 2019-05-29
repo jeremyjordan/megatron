@@ -2,8 +2,10 @@
 # https://github.com/keras-team/keras/blob/master/keras/utils/vis_utils.py
 
 import os
-
-from . import utils
+from .utils.generic import listify
+from IPython.display import SVG
+from .nodes import InputNode, MetricNode, ExploreNode
+from .layers import Lambda
 
 # check for pydot
 try:
@@ -13,97 +15,95 @@ except ImportError:
 
 
 def _check_pydot():
-    '''Raise errors if `pydot` or GraphViz are not properly installed.'''
+    """Raise errors if `pydot` or PipelineViz are not properly installed."""
     if pydot is None:
         raise ImportError('Failed to import `pydot`. Please install `pydot` in your '
                           'current environment.')
     try:
         pydot.Dot.create(pydot.Dot())
     except OSError:
-        raise OSError('GraphViz must be installed with its executables included in the $PATH.')
+        raise OSError('PipelineViz must be installed with its executables included in the $PATH.')
 
 
-def pipeline_to_dot(graph, output_nodes, rankdir='TB'):
-    '''
-    Convert a megatron Graph to dot format for visualization.
-
-    Usage
-    -----
-    To inspect within a notebook, use:
-
-    ```
-    from IPython.display import SVG
-    from megatron.visuals import pipeline_to_dot
-
-    SVG(pipeline_to_dot(graph).create(prog='dot', format='svg'))
-    ```
-
-    Otherwise, use the megatron.visuals.plot_pipeline(graph, output_nodes) method to
-    save graph as a PNG file.
+def pipeline_to_dot(pipeline, rankdir='TB'):
+    """Convert a megatron Pipeline to dot format for visualization.
 
     Parameters
     ----------
-    graph : megatron.Graph
-        Feature pipeline defined as a graph.
-    output_nodes : megatron.Node or list of megatron.Node
-        The output nodes of the pipeline determine your feature-space. Include a list
-        of all nodes which you would like to be included as features in the output.
+    pipeline : megatron.Pipeline
+        Feature pipeline defined as a pipeline.
     rankdir : str ['TB' or 'LR']
-        Direction of graph to plot (top to bottom or left to right).
-
+        Direction of pipeline to plot (top to bottom or left to right).
 
     Returns
     -------
     pydot.Dot
-        Dot representation of the Graph.
-    '''
-
+        Dot representation of the Pipeline.
+    """
     _check_pydot()
     dot = pydot.Dot()
     dot.set('rankdir', rankdir)
     dot.set('concentrate', True)
     dot.set_node_defaults(shape='record')
 
-    # build graph
-    paths = []
-    output_nodes = utils.listify(output_nodes)
-    for output_node in output_nodes:
-        paths.append(graph._postorder_traversal(output_node))
-
     # add nodes
-    nodes = {node for path in paths for node in path}
-    for node in nodes:
-
+    for node in pipeline.nodes:
         node_id = str(id(node))
         label = node.name
-        pydot_node = pydot.Node(node_id, label=label)
+        # make input nodes green, output nodes blue
+        if isinstance(node, InputNode):
+            color = '#b7e3ff'
+        elif node in pipeline.outputs:
+            color = '#aeffad'
+        elif isinstance(node, MetricNode):
+            color = '#ffba54'
+        elif isinstance(node, ExploreNode):
+            color = '#e6ef34'
+        else:
+            color = '#e8e8e8'
+        pydot_node = pydot.Node(node_id, label=label, style='filled', fillcolor=color)
         dot.add_node(pydot_node)
 
         # create edges
-        for input_node in reversed(node.input_nodes):
+        for input_node in reversed(node.inbound_nodes):
             input_node_id = str(id(input_node))
             dot.add_edge(pydot.Edge(input_node_id, node_id))
 
     return dot
 
 
-def plot_pipeline(graph, output_nodes, save_path='pipeline.png', rankdir='TB'):
-    '''
-    Save visualization of graph to an image file.
+def pipeline_imshow(pipeline, rankdir='TB'):
+    """Create visualization of pipeline within Jupyter Notebook.
 
     Parameters
     ----------
-    graph : megatron.Graph
-        Feature pipeline defined as a graph.
-    output_nodes : megatron.Node or list of megatron.Node
-        The output nodes of the pipeline determine your feature-space. Include a list
-        of all nodes which you would like to be included as features in the output.
-    save_path : str
-        Specify where to save the graph visualization.
+    pipeline : megatron.Pipeline
+        Feature pipeline defined as a pipeline.
     rankdir : str ['TB' or 'LR']
-        Direction of graph to plot (top to bottom or left to right).
-    '''
-    dot = pipeline_to_dot(graph, output_nodes, rankdir)
+        Direction of pipeline to plot (top to bottom or left to right).
+
+    Returns
+    -------
+    IPython.display.SVG
+        Display of pipeline.
+    """
+    dot = pipeline_to_dot(pipeline, rankdir)
+    return SVG(dot.create(prog='dot', format='svg'))
+
+
+def pipeline_imsave(pipeline, save_path='pipeline.png', rankdir='TB'):
+    """Save visualization of pipeline to an image file.
+
+    Parameters
+    ----------
+    pipeline : megatron.Pipeline
+        Feature pipeline defined as a pipeline.
+    save_path : str
+        Specify where to save the pipeline visualization.
+    rankdir : str ['TB' or 'LR']
+        Direction of pipeline to plot (top to bottom or left to right).
+    """
+    dot = pipeline_to_dot(pipeline, rankdir)
     _, extension = os.path.splitext(save_path)
     if not extension:
         extension = 'png'

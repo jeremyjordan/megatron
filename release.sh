@@ -14,11 +14,13 @@ fi
 
 # rebuild images and bump docker versions
 echo "Building docker images..."
-docker/build --no-cache
+docker/build
 echo "Docker images built."
 
 # push images to hub
 echo "Pushing docker images..."
+echo "Password hint:"
+cat creds/docker_hint
 docker login -u ntaylor22
 docker push ntaylor22/megatron:$new_version &
 wait
@@ -31,10 +33,13 @@ echo "Current version number: $version"
 read -p "New version number: " new_version
 sleep 1
 
+# change version in setup.py
+sed -i "s/$version/$new_version/g" setup.py
+
 # bump version, push
 echo "Committing version change..."
 echo $new_version > VERSION
-git add VERSION
+git add VERSION setup.py
 git commit -m "version $new_version"
 git tag -a "$new_version" -m "version $new_version"
 git push origin master
@@ -42,8 +47,11 @@ git push origin master --tags
 echo "Version change committed."
 
 # re-run setup and push to pypi
-echo "Pushing to pypi..."
 python3 setup.py sdist
+echo "Pushing to pypi..."
+echo "Username is ntaylorwss"
+echo "Password hint:"
+cat creds/pypi_hint
 twine upload dist/*
 echo "Pushed to pypi."
 echo "Successful release!"
